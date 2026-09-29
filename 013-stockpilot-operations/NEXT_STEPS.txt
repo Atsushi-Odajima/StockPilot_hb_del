@@ -1,0 +1,6 @@
+現在位置（再開用）
+- サーバー側（DB・台帳・発注・補充・棚卸・CSV・帳票・バックアップ・認証・API）実装済み、tests/*.test.ts 合格。
+- 次：Web UI（src/web）React SPA + PWA、カメラ読取、E2E（Playwright）、資料一式。
+再開手順：
+  service postgresql start
+  cd 013-stockpilot-operations && npm ci && npm test

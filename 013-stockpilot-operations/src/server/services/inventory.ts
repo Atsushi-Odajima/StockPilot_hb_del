@@ -93,6 +93,8 @@ export interface OpSpec {
   poId?: string | null;
   stocktakeId?: string | null;
   importId?: string | null;
+  externalId?: string | null;
+  externalHash?: string | null;
   noSource?: boolean;
   movements: Movement[];
   expected?: { skuId: string; locationId: string; qty: number }[];
@@ -152,6 +154,13 @@ export interface OpResult {
 }
 
 const bkey = (s: string, l: string) => `${s}|${l}`;
+
+/** CSV取込など一括経路から渡す付帯情報 */
+export interface ImportExtra {
+  importId?: string;
+  externalId?: string | null;
+  externalHash?: string | null;
+}
 
 /** 事前にロケーションをID順でロックする（複数伝票をまとめて確定する経路用） */
 export async function lockLocations(c: Tx, wsId: string, ids: string[]): Promise<Map<string, LocRow>> {
@@ -269,8 +278,8 @@ export async function applyOperation(c: Tx, ctx: Ctx, spec: OpSpec): Promise<OpR
   const opId = uuid();
   const now = ctx.now();
   await c.query(
-    `INSERT INTO operations (ws_id,id,op_no,kind,purpose,business_date,committed_at,po_id,stocktake_id,import_id,reason,note,external_ref,destination_label,no_source)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+    `INSERT INTO operations (ws_id,id,op_no,kind,purpose,business_date,committed_at,po_id,stocktake_id,import_id,reason,note,external_ref,destination_label,no_source,external_id,external_hash)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
     [
       ctx.wsId,
       opId,
@@ -287,6 +296,8 @@ export async function applyOperation(c: Tx, ctx: Ctx, spec: OpSpec): Promise<OpR
       spec.externalRef ?? '',
       spec.destinationLabel ?? '',
       spec.noSource ?? false,
+      spec.externalId ?? null,
+      spec.externalHash ?? null,
     ],
   );
 
@@ -387,12 +398,12 @@ export async function initialStock(ctx: Ctx, cmd: z.infer<typeof zInitialStockCm
   return runCommand(ctx, 'initial_stock', cmd.idempotencyKey, cmd, (c) => initialStockTx(c, ctx, cmd));
 }
 
-export async function initialStockTx(c: Tx, ctx: Ctx, cmd: z.infer<typeof zInitialStockCmd>, importId?: string) {
+export async function initialStockTx(c: Tx, ctx: Ctx, cmd: z.infer<typeof zInitialStockCmd>, extra: ImportExtra = {}) {
   return applyOperation(c, ctx, {
     kind: 'initial',
     businessDate: cmd.businessDate,
     note: cmd.note,
-    importId,
+    ...extra,
     movements: cmd.lines.map((l) => ({ skuId: l.skuId, locationId: l.locationId, delta: l.qty, kind: 'initial' as const })),
     check: async (cc) => {
       const r = await cc.query(
@@ -418,14 +429,14 @@ export async function outsideReceipt(ctx: Ctx, cmd: z.infer<typeof zOutsideRecei
   noDupPairs(cmd.lines);
   return runCommand(ctx, 'outside_receipt', cmd.idempotencyKey, cmd, (c) => outsideReceiptTx(c, ctx, cmd));
 }
-export function outsideReceiptTx(c: Tx, ctx: Ctx, cmd: z.infer<typeof zOutsideReceiptCmd>, importId?: string) {
+export function outsideReceiptTx(c: Tx, ctx: Ctx, cmd: z.infer<typeof zOutsideReceiptCmd>, extra: ImportExtra = {}) {
   return applyOperation(c, ctx, {
     kind: 'outside_receipt',
     businessDate: cmd.businessDate,
     reason: cmd.reason,
     note: cmd.note,
     externalRef: cmd.externalRef,
-    importId,
+    ...extra,
     expected: cmd.expected,
     movements: cmd.lines.map((l) => ({ skuId: l.skuId, locationId: l.locationId, delta: l.qty, kind: 'outside_receipt' as const, reason: cmd.reason })),
   });
@@ -436,7 +447,7 @@ export async function issue(ctx: Ctx, cmd: z.infer<typeof zIssueCmd>) {
   noDupPairs(cmd.lines);
   return runCommand(ctx, 'issue', cmd.idempotencyKey, cmd, (c) => issueTx(c, ctx, cmd));
 }
-export function issueTx(c: Tx, ctx: Ctx, cmd: z.infer<typeof zIssueCmd>, importId?: string) {
+export function issueTx(c: Tx, ctx: Ctx, cmd: z.infer<typeof zIssueCmd>, extra: ImportExtra = {}) {
   const kind: EventKind = cmd.purpose === 'sale' ? 'issue_sale' : 'issue_other';
   return applyOperation(c, ctx, {
     kind: 'issue',
@@ -445,7 +456,7 @@ export function issueTx(c: Tx, ctx: Ctx, cmd: z.infer<typeof zIssueCmd>, importI
     note: cmd.note,
     externalRef: cmd.externalRef,
     destinationLabel: cmd.destinationLabel,
-    importId,
+    ...extra,
     expected: cmd.expected,
     movements: cmd.lines.map((l) => ({ skuId: l.skuId, locationId: l.locationId, delta: -l.qty, kind })),
     check: async (_c, st) => {
@@ -471,7 +482,7 @@ export async function transfer(ctx: Ctx, cmd: z.infer<typeof zTransferCmd>) {
   }
   return runCommand(ctx, 'transfer', cmd.idempotencyKey, cmd, (c) => transferTx(c, ctx, cmd));
 }
-export function transferTx(c: Tx, ctx: Ctx, cmd: z.infer<typeof zTransferCmd>, importId?: string) {
+export function transferTx(c: Tx, ctx: Ctx, cmd: z.infer<typeof zTransferCmd>, extra: ImportExtra = {}) {
   if (cmd.fromLocationId === cmd.toLocationId) fail('VALIDATION', '移動元と移動先が同じです');
   const movements: Movement[] = [];
   cmd.lines.forEach((l, i) => {
@@ -483,7 +494,7 @@ export function transferTx(c: Tx, ctx: Ctx, cmd: z.infer<typeof zTransferCmd>, i
     businessDate: cmd.businessDate,
     reason: cmd.reason,
     note: cmd.note,
-    importId,
+    ...extra,
     expected: cmd.expected,
     movements,
     check: async (_c, st) => {
@@ -516,13 +527,13 @@ export async function correction(ctx: Ctx, cmd: z.infer<typeof zCorrectionCmd>) 
   noDupPairs(cmd.lines);
   return runCommand(ctx, 'correction', cmd.idempotencyKey, cmd, (c) => correctionTx(c, ctx, cmd));
 }
-export function correctionTx(c: Tx, ctx: Ctx, cmd: z.infer<typeof zCorrectionCmd>, importId?: string) {
+export function correctionTx(c: Tx, ctx: Ctx, cmd: z.infer<typeof zCorrectionCmd>, extra: ImportExtra = {}) {
   return applyOperation(c, ctx, {
     kind: 'correction',
     businessDate: cmd.businessDate,
     reason: cmd.reason,
     note: cmd.note,
-    importId,
+    ...extra,
     expected: cmd.expected,
     movements: cmd.lines.map((l) => ({
       skuId: l.skuId,

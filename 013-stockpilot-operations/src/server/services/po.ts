@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import type { Tx } from '../db/pool.js';
 import { fail } from '../errors.js';
 import { type Ctx, runCommand, uuid, writeTx, readTx, today } from './context.js';
-import { applyOperation, type Movement } from './inventory.js';
+import { applyOperation, type Movement, type ImportExtra } from './inventory.js';
 import type { PoDraftInput, zPoPlaceCmd, zPoReviseCmd, zPoCancelRemainingCmd, zReceiptCmd } from '../../shared/schemas.js';
 import { poDisplayStatus, outstanding, PO_STATUS_LABEL } from '../../domain/po.js';
 import { computeReplenishment } from '../../domain/replenish.js';
@@ -287,7 +287,7 @@ export async function receive(ctx: Ctx, poId: string, cmd: z.infer<typeof zRecei
   return runCommand(ctx, 'po_receive', cmd.idempotencyKey, { poId, ...cmd }, (c) => receiveTx(c, ctx, poId, cmd));
 }
 
-export async function receiveTx(c: Tx, ctx: Ctx, poId: string, cmd: z.infer<typeof zReceiptCmd>, importId?: string) {
+export async function receiveTx(c: Tx, ctx: Ctx, poId: string, cmd: z.infer<typeof zReceiptCmd>, extra: ImportExtra = {}) {
   const p = await c.query(`SELECT status, po_no FROM purchase_orders WHERE ws_id=$1 AND id=$2 FOR UPDATE`, [ctx.wsId, poId]);
   if (p.rowCount === 0) fail('NOT_FOUND', '発注が見つかりません');
   if (p.rows[0].status !== 'placed') fail('STATE', '下書きの発注には入荷できません。先に「発注済みにする」を行ってください。');
@@ -323,7 +323,7 @@ export async function receiveTx(c: Tx, ctx: Ctx, poId: string, cmd: z.infer<type
     businessDate: cmd.businessDate,
     note: cmd.note,
     poId,
-    importId,
+    ...extra,
     expected: cmd.expected,
     movements,
   });

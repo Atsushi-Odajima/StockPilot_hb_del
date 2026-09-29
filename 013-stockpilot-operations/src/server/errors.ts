@@ -67,6 +67,6 @@ export class AppError extends Error {
   }
 }
 
-export const fail = (code: ErrorCode, message: string, details?: unknown): never => {
+export function fail(code: ErrorCode, message: string, details?: unknown): never {
   throw new AppError(code, message, details);
-};
+}
