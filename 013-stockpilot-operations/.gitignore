@@ -9,3 +9,5 @@ test-results/
 playwright-report/
 coverage/
 release/
+src/web/public/wasm/
+.data-e2e/

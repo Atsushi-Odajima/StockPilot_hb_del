@@ -172,9 +172,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const b = P(z.object({ email: z.string().max(200) }), req.body);
     const r = await auth.requestPasswordReset(db, b.email);
     if (r && deps.mailer) {
-      await deps.mailer(r.userEmail, 'StockPilot パスワード再設定', `次のURLから30分以内に再設定してください。\n${config.publicOrigin}/#/reset?token=${r.token}`);
+      await deps.mailer(r.userEmail, 'StockPilot パスワード再設定', `次のURLから30分以内に再設定してください。\n${config.publicOrigin}/reset?token=${r.token}`);
     } else if (r && config.mailer === 'console' && config.env !== 'production') {
-      console.log(`[dev mailer] reset link for ${r.userEmail}: ${config.publicOrigin}/#/reset?token=${r.token}`);
+      console.log(`[dev mailer] reset link for ${r.userEmail}: ${config.publicOrigin}/reset?token=${r.token}`);
     }
     return { ok: true, message: '登録があれば再設定の案内を送信しました' };
   });

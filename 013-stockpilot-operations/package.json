@@ -9,15 +9,17 @@
   },
   "scripts": {
     "dev:server": "tsx watch src/server/main.ts",
-    "dev:web": "vite",
-    "build": "vite build && node scripts/build-server.mjs",
+    "dev:web": "node scripts/copy-assets.mjs && vite",
+    "build": "node scripts/copy-assets.mjs && vite build && node scripts/build-server.mjs",
     "start": "node dist/server/main.js",
     "migrate": "tsx src/server/db/migrate-cli.ts",
     "admin": "tsx src/server/admin-cli.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "loadtest": "tsx scripts/loadtest.ts"
+    "loadtest": "tsx scripts/loadtest.ts",
+    "migrate:prod": "node dist/server/migrate-cli.js",
+    "admin:prod": "node dist/server/admin-cli.js"
   },
   "dependencies": {
     "@expo-google-fonts/noto-sans-jp": "^0.4.3",
