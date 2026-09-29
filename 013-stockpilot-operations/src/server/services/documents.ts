@@ -66,7 +66,7 @@ export async function issueLabels(ctx: Ctx, input: { skuIds: string[]; locationI
           payload: internalQrPayload('SKU', s.id),
           title: s.code,
           subtitle: [s.name, variant(s.color, s.size)].filter(Boolean).join('\n'),
-          note: j ? `JAN ${j.code}（内部QRとは別）` : '内部QR',
+          note: j ? `JAN ${j.code}` : '内部QR',
         });
       }
     }

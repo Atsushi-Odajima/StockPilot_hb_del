@@ -1,6 +1,18 @@
-現在位置（再開用）
-- サーバー側（DB・台帳・発注・補充・棚卸・CSV・帳票・バックアップ・認証・API）実装済み、tests/*.test.ts 合格。
-- 次：Web UI（src/web）React SPA + PWA、カメラ読取、E2E（Playwright）、資料一式。
+NEXT_STEPS（再開直後に行うこと）
+
+現在位置：
+  Phase 0〜8 のコード実装・自動テスト・資料は完了。残りは「人間／実環境が必要な作業」。
+
 再開手順：
-  service postgresql start
-  cd 013-stockpilot-operations && npm ci && npm test
+  1. service postgresql start（DB: stockpilot_dev / stockpilot_test / stockpilot_e2e、ロール stockpilot）
+  2. cd 013-stockpilot-operations && npm ci
+  3. npm run typecheck && npm test && npm run build && npx playwright test
+     → TEST_REPORT.md の件数（71件・20件）と一致することを確認
+
+次の作業（優先順）：
+  1. ステージング環境（HTTPS）へデプロイ（OPERATIONS.md）。ホスティング先と有料プランを決め、料金を OPERATING_COSTS.md に記録
+  2. 実機確認：iPhone Safari（通常・ホーム画面）、Android Chrome で RELEASE_CHECKLIST.md の実機項目を実施し TEST_REPORT.md を更新
+  3. 印刷したQRラベルとJAN商品で実カメラ読取、Code128・EAN-8 の確認
+  4. パスワード再設定メールの送信サービスを接続（app.ts の mailer）
+  5. 写真の S3互換ストレージドライバ（storage.ts の Storage 実装を追加）
+  6. 販売条件（提供期間・容量上限・サポート・継続費）を決めて販売文・注意事項に反映

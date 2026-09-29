@@ -12,6 +12,7 @@ import { fail } from '../errors.js';
 import { type Ctx, uuid, sha256 } from './context.js';
 import { latestSchemaVersion } from '../db/migrate.js';
 import { BACKUP_MAX_BYTES, BACKUP_MAX_FILES } from '../../shared/limits.js';
+import { sniffImage } from '../storage.js';
 
 export const APP_VERSION = '0.1.0';
 const FORMAT = 'stockpilot-backup';
@@ -223,8 +224,9 @@ export async function stageRestore(ctx: Ctx, zipPath: string): Promise<RestorePr
     if (tableData[tb.name].length !== manifest.counts?.[tb.name]) fail('RESTORE_INVALID', `${p} の件数がマニフェストと一致しません`);
   }
   // 添付：参照される全実体があり、ハッシュが一致すること
-  for (const f of tableData.files as { sha256: string; size: number }[]) {
+  for (const f of tableData.files as { sha256: string; size: number; mime: string }[]) {
     const b = entries.get(`files/${f.sha256}`);
+    if (b && sniffImage(b) !== f.mime) fail('RESTORE_INVALID', `添付ファイル ${String(f.sha256).slice(0, 12)}… の中身が画像形式と一致しません`);
     if (!b) fail('RESTORE_INVALID', `添付ファイル ${String(f.sha256).slice(0, 12)}… が欠けています`);
     if (sha256(b!) !== f.sha256 || b!.length !== f.size) fail('RESTORE_INVALID', `添付ファイル ${String(f.sha256).slice(0, 12)}… のハッシュが一致しません`);
   }

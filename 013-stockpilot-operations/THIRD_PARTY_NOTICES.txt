@@ -1,0 +1,27 @@
+StockPilot — Third Party Notices
+（確認日 2026-09-29。`npm ls --omit=dev --all` の全146パッケージと、Webバンドルに含まれるパッケージを確認）
+
+■ フォント（PDFに埋め込み）
+Noto Sans JP (Regular / Bold)  — SIL Open Font License 1.1
+  Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
+  入手元：@expo-google-fonts/noto-sans-jp 0.4.3（Google Fonts 版）。全文：assets/fonts/OFL.txt
+  PDFへのサブセット埋め込みは OFL で許可されている。OSのフォントは同梱していない。
+
+■ サーバー（主な直接依存）
+fastify 5.12.5 (MIT), @fastify/cookie 11.1.2 (MIT), @fastify/helmet 13.1.1 (MIT), @fastify/multipart 10.1.2 (MIT),
+@fastify/rate-limit 11.2.0 (MIT), @fastify/static 10.1.5 (MIT), zod 4.6.5 (MIT), pg 8.23.0 (MIT), pdfkit 0.20.2 (MIT),
+qrcode 1.5.4 (MIT), papaparse 5.7.0 (MIT), yauzl 3.4.0 (MIT), yazl 3.3.1 (MIT)
+
+■ ブラウザ（Webバンドル）
+react 19.3.0 / react-dom 19.3.0 (MIT), react-router-dom 7.18.4 (MIT), qrcode 1.5.4 (MIT),
+barcode-detector 3.2.2 (MIT), zxing-wasm 3.1.x (MIT) — 同梱の zxing_reader.wasm は zxing-cpp (Apache License 2.0) をビルドしたもの。
+
+■ 間接依存のライセンス内訳（本番依存146件）
+MIT 121 / ISC 13 / BSD-3-Clause 4（fast-uri, light-my-request, secure-json-parse）/ BlueOak-1.0.0 5（glob, lru-cache, minimatch, minipass, path-scurry）/
+Apache-2.0 1（@swc/helpers）/ 0BSD 1（tslib）/ MIT（package.json 未記載・LICENSE ファイルで確認）1（png-js）
+GPL 等のコピーレフトライセンスは含まれていない。
+
+各ライセンス全文は node_modules/<パッケージ>/LICENSE を参照。配布物には本ファイルと assets/fonts/OFL.txt を含める。
+
+■ 開発時のみ（配布物に含まれない）
+typescript, vite, @vitejs/plugin-react, vitest, tsx, esbuild, @playwright/test (Apache-2.0), pdf-parse (Apache-2.0), 各 @types

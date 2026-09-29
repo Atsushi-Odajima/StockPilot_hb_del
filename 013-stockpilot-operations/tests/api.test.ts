@@ -192,6 +192,41 @@ describe('T24/T25 CSV', () => {
     expect(ok.result.imported).toBe(1);
     expect((await c.ok(c.get(`/api/skus/${A.s}`))).available).toBe(9);
   });
+  it('T21 棚卸停止中の場所へのCSV確定は拒否（プレビュー後に棚卸が始まった場合も）', async () => {
+    const c = new Client(app);
+    await c.register();
+    const A = await setupBasic(c);
+    const csvText = '種別,日付,SKUコード,場所コード,数量,目的,理由\n出庫,2026-03-30,00123,A,1,販売,\n';
+    const pv = await c.ok(c.upload('/api/import/preview', Buffer.from(csvText), 'x.csv', { kind: 'movements', encoding: 'utf-8' }));
+    expect(pv.errorCount).toBe(0);
+    await c.ok(c.post('/api/stocktakes', { idempotencyKey: k(), locationId: A.a, businessDate: TODAY }));
+    const r = await c.post(`/api/import/${pv.importId}/commit`, { idempotencyKey: k(), businessDate: TODAY });
+    expect(r.statusCode).toBe(400);
+    expect(r.json().error.details.rows[0].errors.join()).toContain('棚卸中');
+    expect((await c.ok(c.get(`/api/skus/${A.s}`))).available).toBe(10);
+  });
+  it('購入者向けサンプルCSVが順番に取り込める（エラー0）', async () => {
+    const fs = await import('node:fs');
+    const c = new Client(app);
+    await c.register();
+    const order: [string, string][] = [
+      ['suppliers', '仕入先'],
+      ['locations', '保管場所'],
+      ['skus', '商品'],
+      ['initial_stock', '初期在庫'],
+      ['po_drafts', '発注下書き'],
+      ['movements', '入出庫履歴'],
+    ];
+    for (const [kind, name] of order) {
+      const buf = fs.readFileSync(`docs/buyer/csv/サンプル_${name}.csv`);
+      const pv = await c.ok(c.upload('/api/import/preview', buf, `${name}.csv`, { kind, encoding: 'utf-8' }));
+      expect(pv.errorCount, `${name}: ${JSON.stringify(pv.rows.filter((r: any) => r.errors.length))}`).toBe(0);
+      await c.ok(c.post(`/api/import/${pv.importId}/commit`, { idempotencyKey: k(), businessDate: TODAY }));
+    }
+    const inv = await c.ok(c.get('/api/inventory?q=ST-001'));
+    expect(inv.rows[0]).toMatchObject({ available: 112 }); // 120 − 8（移動は全体不変）
+    expect((await c.ok(c.get('/api/verify'))).ok).toBe(true);
+  });
   it('T25 先頭ゼロ・引用符・改行・Shift_JIS・数式防止', async () => {
     const c = new Client(app);
     await c.register();
