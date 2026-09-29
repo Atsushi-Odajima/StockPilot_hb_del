@@ -8,7 +8,7 @@ await c.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
 await c.end();
 const p = spawn('node', ['dist/server/main.js'], {
   stdio: 'inherit',
-  env: { ...process.env, NODE_ENV: 'development', DATABASE_URL: url, PORT: '8090', PUBLIC_ORIGIN: 'http://localhost:8090', DATA_DIR: '.data-e2e', REGISTRATION_DEFAULT_ENTITLEMENT: 'active', LOG_LEVEL: 'warn' },
+  env: { ...process.env, NODE_ENV: 'development', DATABASE_URL: url, PORT: '8090', PUBLIC_ORIGIN: 'http://localhost:8090', DATA_DIR: '.data-e2e', REGISTRATION_DEFAULT_ENTITLEMENT: 'active', LOG_LEVEL: 'warn', AUTH_RATE_LIMIT_PER_MIN: '1000', RATE_LIMIT_PER_MIN: '100000' },
 });
 process.on('SIGTERM', () => p.kill('SIGTERM'));
 process.on('SIGINT', () => p.kill('SIGINT'));

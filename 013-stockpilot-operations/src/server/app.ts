@@ -81,7 +81,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     crossOriginEmbedderPolicy: false,
     hsts: config.env === 'production' ? { maxAge: 15552000, includeSubDomains: true } : false,
   });
-  await app.register(rateLimit, { global: true, max: 600, timeWindow: '1 minute', errorResponseBuilder: () => ({ statusCode: 429, error: { code: 'RATE_LIMITED', message: '操作が多すぎます。少し待ってから再度お試しください。' } }) });
+  await app.register(rateLimit, { global: true, max: Number(process.env.RATE_LIMIT_PER_MIN ?? 600), timeWindow: '1 minute', errorResponseBuilder: () => ({ statusCode: 429, error: { code: 'RATE_LIMITED', message: '操作が多すぎます。少し待ってから再度お試しください。' } }) });
   await app.register(multipart, { limits: { fileSize: BACKUP_MAX_BYTES, files: 1, fields: 10 } });
 
   // ---------- 共通：エラー応答 ----------
@@ -146,7 +146,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const ctxOf = (req: FastifyRequest) => req.ctx!;
   const P = <T extends z.ZodTypeAny>(schema: T, v: unknown): z.infer<T> => schema.parse(v);
 
-  const authLimit = { config: { rateLimit: { max: config.env === 'test' ? 10_000 : 10, timeWindow: '1 minute' } } };
+  const authLimit = { config: { rateLimit: { max: config.env === 'test' ? 10_000 : Number(process.env.AUTH_RATE_LIMIT_PER_MIN ?? 10), timeWindow: '1 minute' } } };
 
   app.post('/api/auth/register', authLimit, async (req, reply) => {
     if (config.registration === 'closed') fail('FORBIDDEN', '現在、新規登録を受け付けていません');
